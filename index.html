@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Vehicle Classifier</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.18.0"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8.4/dist/teachablemachine-image.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 40px;
+    }
+
+    #app-container {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+      padding: 30px 40px;
+      max-width: 480px;
+      width: 100%;
+      text-align: center;
+    }
+
+    header {
+      background: #0056b3;
+      color: white;
+      padding: 12px 0;
+      font-weight: 700;
+      font-size: 1.4rem;
+      border-radius: 16px 16px 0 0;
+      margin: -30px -40px 30px -40px;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+      margin: 10px;
+      transition: background-color 0.3s ease;
+      user-select: none;
+    }
+
+    .btn:hover {
+      background-color: #0056b3;
+    }
+
+    .btn:active {
+      transform: scale(0.97);
+    }
+
+    #uploaded-image {
+      max-width: 100%;
+      margin-top: 20px;
+      border-radius: 10px;
+      display: none;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+      transition: opacity 0.4s ease-in-out;
+      opacity: 0;
+    }
+
+    #uploaded-image.show {
+      opacity: 1;
+      display: block;
+    }
+
+    #results {
+      margin-top: 20px;
+      font-size: 24px;
+      font-weight: bold;
+      color: #222;
+      min-height: 60px;
+    }
+
+    #loader {
+      margin-top: 20px;
+      font-style: italic;
+      color: #777;
+      min-height: 24px;
+    }
+  </style>
+</head>
+<body>
+  <div id="app-container">
+    <header>Vehicle Classifier</header>
+
+    <input type="file" accept="image/*" id="fileInput" style="display:none" onchange="handleImageUpload(event)" />
+    <button class="btn" onclick="document.getElementById('fileInput').click()">Choose Image</button>
+    <button class="btn" onclick="resetApp()">Reset</button>
+
+    <div id="loader">⏳ Loading model...</div>
+    <img id="uploaded-image" src="#" alt="Uploaded Image" />
+    <div id="results"></div>
+  </div>
+
+  <script>
+    const MODEL_URL = "https://teachablemachine.withgoogle.com/models/UEAL8JSfl/";
+    let model;
+    const THRESHOLD = 0.6;
+
+    async function loadModel() {
+      model = await tmImage.load(MODEL_URL + "model.json", MODEL_URL + "metadata.json");
+      document.getElementById("loader").innerText = "✅ Model loaded. Ready to classify.";
+    }
+
+    async function handleImageUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const image = document.getElementById("uploaded-image");
+      image.src = window.URL.createObjectURL(file);
+      image.classList.remove("show");
+      image.style.display = "block";
+
+      document.getElementById("results").innerHTML = "";
+      document.getElementById("loader").innerText = "🔍 Analyzing image...";
+
+      image.onload = async () => {
+        image.classList.add("show");
+        await predict(image);
+      };
+    }
+
+    async function predict(image) {
+      if (!model) {
+        document.getElementById("results").innerText = "Model not loaded yet...";
+        return;
+      }
+
+      const predictions = await model.predict(image);
+      console.log(predictions);
+
+      let best = predictions[0];
+      for (let i = 1; i < predictions.length; i++) {
+        if (predictions[i].probability > best.probability) {
+          best = predictions[i];
+        }
+      }
+
+      const labelMap = {
+        Car: "Car",
+        Bus: "Bus",
+        Truck: "Truck",
+        Bike: "Bike"
+      };
+
+      let resultText = "";
+      if (best.probability >= THRESHOLD) {
+        resultText = labelMap[best.className] || best.className;
+      } else {
+        resultText = "❌ Could not confidently identify the vehicle.";
+      }
+
+      document.getElementById("results").innerHTML = resultText;
+      document.getElementById("loader").innerText = "✅ Prediction complete.";
+    }
+
+    function resetApp() {
+      document.getElementById("fileInput").value = "";
+      const image = document.getElementById("uploaded-image");
+      image.style.display = "none";
+      image.src = "#";
+      image.classList.remove("show");
+
+      document.getElementById("results").innerHTML = "";
+      document.getElementById("loader").innerText = "✅ Model loaded. Ready to classify.";
+    }
+
+    loadModel();
+  </script>
+</body>
+</html>
