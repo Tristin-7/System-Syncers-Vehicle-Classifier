@@ -154,12 +154,8 @@
         Bike: "Bike"
       };
 
-      let resultText = "";
-      if (best.probability >= THRESHOLD) {
-        resultText = labelMap[best.className] || best.className;
-      } else {
-        resultText = "❌ Could not confidently identify the vehicle.";
-      }
+      // Always show best prediction label without threshold check
+      const resultText = labelMap[best.className] || best.className;
 
       document.getElementById("results").innerHTML = resultText;
       document.getElementById("loader").innerText = "✅ Prediction complete.";
